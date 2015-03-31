@@ -26,10 +26,26 @@ RUN tar -zxvf snort-$VERSION_SNORT.tar.gz
 WORKDIR /build/snort-$VERSION_SNORT
 RUN ./configure --enable-sourcefire; make; make install
 
-RUN mkdir /usr/local/lib/snort_dynamicrules
+RUN mkdir -p /usr/local/var/log/snort
 
 RUN ln -s /usr/local/bin/snort /usr/sbin/snort
 RUN ldconfig
+
+RUN groupadd snort
+RUN useradd snort -r -s /sbin/nologin -c SNORT_IDS -g snort
+RUN mkdir /etc/snort
+RUN mkdir /etc/snort/rules
+RUN mkdir /etc/snort/preproc_rules
+RUN touch /etc/snort/rules/white_list.rules /etc/snort/rules/black_list.rules /etc/snort/rules/local.rules
+RUN mkdir /var/log/snort
+RUN mkdir /usr/local/lib/snort_dynamicrules
+RUN chmod -R 5775 /etc/snort
+RUN chmod -R 5775 /var/log/snort
+RUN chmod -R 5775 /usr/local/lib/snort_dynamicrules
+RUN chown -R snort:snort /etc/snort
+RUN chown -R snort:snort /var/log/snort
+RUN chown -R snort:snort /usr/local/lib/snort_dynamicrules
+RUN chown -R snort:snort /usr/local/var/log/snort
 
 RUN mkdir -p /etc/snort/rules
 RUN cp etc/*.conf* /etc/snort
@@ -51,4 +67,10 @@ RUN apt-get autoclean -y
 RUN apt-get clean -y
 RUN apt-get autoremove -y -q
 
-RUN sed -i 's/include \$RULE\_PATH/#include \$RULE\_PATH/' /etc/snort/snort.conf
+#RUN sed -i 's/include \$RULE\_PATH/#include \$RULE\_PATH/' /etc/snort/snort.conf
+
+RUN echo 'alert icmp any any -> any any (msg:"ICMP test"; sid:10000001; rev:001;)' > /etc/snort/rules/local.rules
+
+ENTRYPOINT ["snort"]
+
+#  -A console -q -u snort -g snort -c /etc/snort/snort.conf -i eth0
